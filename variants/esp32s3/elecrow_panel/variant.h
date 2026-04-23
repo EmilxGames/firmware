@@ -72,7 +72,13 @@
 #define SENSOR_POWER_ON LOW
 #else
 // 4.3", 5.0", 7.0"
+// Hardware revision v1.2+ moved the LoRa NSS from IO0 to IO8.
+// Enable CROWPANEL_HW_V14 to build for boards labelled v1.2, v1.3, v1.4.
+#ifdef CROWPANEL_HW_V14
+#define LORA_CS 8
+#else
 #define LORA_CS 0
+#endif
 #define LORA_SCK 5
 #define LORA_MISO 4
 #define LORA_MOSI 6

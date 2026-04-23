@@ -489,6 +489,20 @@ void setup()
 #elif HAS_WIRE
     Wire.begin();
 #endif
+
+#if defined(CROWPANEL_HW_V14)
+    // Crowpanel Advance v1.2+ drives the backlight through an STC8H1K28
+    // microcontroller on I2C (addr 0x30). Values 0x05..0x10 set brightness;
+    // 0x05 = off, 0x10 = maximum. Kick it to full brightness at boot so the
+    // display is visible as soon as LGFX finishes initialising.
+    Wire.beginTransmission(0x30);
+    Wire.write(0x10);
+    if (Wire.endTransmission() != 0) {
+        LOG_WARN("Crowpanel v1.2+ backlight controller (0x30) did not ACK");
+    } else {
+        LOG_INFO("Crowpanel v1.2+ backlight set to max via STC8H1K28 @ 0x30");
+    }
+#endif
 #endif
 
 #if defined(M5STACK_UNITC6L)
