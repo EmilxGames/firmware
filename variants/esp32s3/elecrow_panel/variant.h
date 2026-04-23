@@ -17,7 +17,14 @@
 #define DAC_I2S_DOUT 12
 #define DAC_I2S_MCLK 8 // don't use GPIO0 because it's assigned to LoRa or button
 #else
+// On hardware revision v1.2+ the LoRa module's NSS/CS line was moved to IO8,
+// which is the same pin the 4.3"/5.0"/7.0" boards previously wired to an
+// external buzzer. Leave PIN_BUZZER undefined for those boards so the startup
+// chime and ExternalNotification PWM don't steal the SPI chip-select. (The
+// STC8H1K28 on v1.2+ has its own buzzer reachable via I2C 0x30 command 246.)
+#ifndef CROWPANEL_HW_V14
 #define PIN_BUZZER 8
+#endif
 #endif
 
 // GPS via UART1 connector
