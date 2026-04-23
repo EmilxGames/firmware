@@ -99,5 +99,12 @@
 #define SX126X_DIO1 LORA_DIO1
 #define SX126X_BUSY LORA_DIO2
 #define SX126X_RESET LORA_RESET
+// The Elecrow SX1262 wireless module used on CrowPanel Advance v1.2+ leaves
+// the SX1262's DIO2 and DIO3 pins not connected. Do NOT tell RadioLib to
+// drive DIO2 as an RF switch or to power a TCXO via DIO3 on that hardware,
+// or SX126x::begin() will wait forever for a TCXO ready signal that never
+// comes and bail out with "Chip not found" (-2). The module is XTAL-only.
+#ifndef CROWPANEL_HW_V14
 #define SX126X_DIO2_AS_RF_SWITCH
 #define SX126X_DIO3_TCXO_VOLTAGE 3.3
+#endif
