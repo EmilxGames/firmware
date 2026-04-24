@@ -81,6 +81,16 @@
 // 4.3", 5.0", 7.0"
 // Hardware revision v1.2+ moved the LoRa NSS from IO0 to IO8.
 // Enable CROWPANEL_HW_V14 to build for boards labelled v1.2, v1.3, v1.4.
+//
+// IMPORTANT: the 4.3"/5.0"/7.0" v1.2+ boards multiplex GPIO 4/5/6/19/20
+// between the I2S audio path (SPK/MIC) and the wireless module (LoRa) via
+// a two-position DIP switch labelled "Function Select" on the back (S1,S0):
+//   S1=0, S0=0  -> MIC & SPK
+//   S1=0, S0=1  -> WM (wireless module / LoRa)   <-- required for Meshtastic
+//   S1=1, S0=1  -> MIC & TF Card
+// The firmware cannot detect or override the DIP switch; the user must set
+// it to "01" physically or the SX126x SPI lines never reach the module and
+// SX126x::begin() returns RADIOLIB_ERR_CHIP_NOT_FOUND (-2).
 #ifdef CROWPANEL_HW_V14
 #define LORA_CS 8
 #else
@@ -91,8 +101,8 @@
 #define LORA_MOSI 6
 
 #define LORA_RESET 19
-#define LORA_DIO1 20 // SX1262 IRQ
-#define LORA_DIO2 2  // SX1262 BUSY
+#define LORA_DIO1 20 // SX126x IRQ
+#define LORA_DIO2 2  // SX126x BUSY
 #endif
 
 #define SX126X_CS LORA_CS

@@ -574,6 +574,13 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
     config.lora.tx_enabled =
         true; // FIXME: maybe false in the future, and setting region to enable it. (unset region forces it off)
     config.lora.override_duty_cycle = false;
+#ifdef CROWPANEL_HW_V14
+    // The Elecrow wireless module on CrowPanel Advance v1.2+ uses an SX1261 chip
+    // (max 15 dBm / ~31 mW). Bake 15 dBm as the default tx_power so factory
+    // reset leaves the radio at the module's hardware ceiling. Regional limits
+    // (e.g. EU_433 = 10 dBm for non-licensed operators) still apply at runtime.
+    config.lora.tx_power = 15;
+#endif
     config.lora.config_ok_to_mqtt = false;
 #if HAS_LORA_FEM
     config.lora.fem_lna_mode = meshtastic_Config_LoRaConfig_FEM_LNA_Mode_ENABLED;
