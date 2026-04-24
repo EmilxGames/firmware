@@ -489,6 +489,7 @@ void setup()
 #elif HAS_WIRE
     Wire.begin();
 #endif
+
 #endif
 
 #if defined(M5STACK_UNITC6L)
@@ -1109,10 +1110,76 @@ void scannerToSensorsMap(const std::unique_ptr<ScanI2CTwoWire> &i2cScanner, Scan
 }
 #endif
 
+#if defined(CROWPANEL_HW_V14)
+// Crowpanel Advance 4.3"/5.0"/7.0" hardware revisions v1.2, v1.3 and v1.4 drive
+// the backlight through an STC8H1K28 microcontroller wired to the main I2C bus
+// at address 0x30. Elecrow's own reference firmware treats it as a single-byte
+// command interface:
+//     0   -> maximum brightness
+//   245   -> backlight off (scale is inverted)
+//   250   -> "activate" wake command (sent while device is asleep)
+// The companion GT911 touch controller lives at 0x5D on the same bus; if either
+// of those addresses fails to ACK we pulse GPIO1 LOW for 120ms (hardware reset
+// of the STC8) and retry, mirroring Elecrow's init loop.
+//
+// The LGFX_ELECROW70 driver also pulses GPIO1 during screen->setup(), which
+// resets the STC8 and loses any brightness we wrote at Wire.begin() time. That
+// is why the v1.0 meshtastic firmware leaves the screen looking dark on v1.2+
+// hardware even though the panel itself initialises fine. To work around that
+// we defer the brightness write into loop(): once LGFX init has returned, the
+// STC8 is stable and we can set (and periodically refresh) its brightness.
+static void crowpanelV14BacklightPoll()
+{
+    static uint32_t lastAttemptMs = 0;
+    static bool stc8Seen = false;
+    static uint8_t wakeAttempts = 0;
+
+    uint32_t now = millis();
+    uint32_t interval = stc8Seen ? 5000 : 500;
+    if (lastAttemptMs != 0 && (now - lastAttemptMs) < interval)
+        return;
+    lastAttemptMs = now;
+
+    auto ack = [](uint8_t addr) {
+        Wire.beginTransmission(addr);
+        return Wire.endTransmission() == 0;
+    };
+
+    if (!stc8Seen) {
+        if (!ack(0x30)) {
+            if (wakeAttempts < 20) {
+                wakeAttempts++;
+                // Nudge the STC8 with its "activate" command (may NACK), then
+                // pulse GPIO1 LOW to force a hardware reset as Elecrow does.
+                Wire.beginTransmission(0x30);
+                Wire.write(250);
+                Wire.endTransmission();
+                pinMode(1, OUTPUT);
+                digitalWrite(1, LOW);
+                delay(120);
+                pinMode(1, INPUT);
+            }
+            return;
+        }
+        stc8Seen = true;
+        LOG_INFO("Crowpanel v1.2+ STC8H1K28 detected at 0x30 (wake attempts: %u); setting backlight to max", wakeAttempts);
+    }
+
+    // 0 = maximum brightness on the STC8's inverted 0..245 scale.
+    Wire.beginTransmission(0x30);
+    Wire.write((uint8_t)0);
+    Wire.endTransmission();
+}
+#endif
+
 #ifndef PIO_UNIT_TESTING
 void loop()
 {
     runASAP = false;
+
+#if defined(CROWPANEL_HW_V14)
+    crowpanelV14BacklightPoll();
+#endif
 
 #ifdef ARCH_ESP32
     esp32Loop();
